@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <locale>
 #include <sstream>
 #include <vector>
 
