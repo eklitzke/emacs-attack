@@ -104,9 +104,8 @@ timeval BootTime() {
 
 // Return true if the string looks like a pid.
 bool IsPid(const char *s) {
-  const char *c = s;
-  while (*c) {
-    if (!isdigit(*c++)) {
+  while (*s) {
+    if (!isdigit(*s++)) {
       return false;
     }
   }
