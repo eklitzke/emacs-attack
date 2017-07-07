@@ -28,7 +28,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-// Table used by Emacs for generating a random suffix.
+// Table used by Emacs to generate "random" suffixes.
 static const char make_temp_name_tbl[64] = {
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
     'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
