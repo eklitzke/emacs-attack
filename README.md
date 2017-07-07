@@ -1,6 +1,6 @@
 # Emacs Attack
 
-This code attacks the Emacs' `make-temp-name` function. It only works on Linux.
+This code attacks the GNU Emacs' `make-temp-name` function. It works on Linux.
 
 ## Building
 
@@ -17,3 +17,9 @@ to stdout. The following arguments are useful:
 | `-s`  | `--seconds` |     100 | Number of seconds to attempt as LCG seeds |
 | `-f`  | `--files`   |      10 | Number of rounds to run each LCG seed     |
 | `-q`  | `--quiet`   |   false | Be quiet                                  |
+
+## License
+
+This code is [free software](https://www.gnu.org/philosophy/free-sw.en.html)
+licensed under the GPLv3 (or, at your option, a later version). This is the same
+license and terms used upstream by GNU Emacs.
