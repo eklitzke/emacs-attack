@@ -85,18 +85,16 @@ timeval BootTime() {
   // not, because we have to loop through a bunch of second offsets later on
   // anyway. But doing this is the Right Thing, so we persevere.
   size_t pos = up.find('.');
-  if (pos == std::string::npos) {
-    std::cerr << "Failed to parse uptime.\n";
-    return {};
+  if (pos != std::string::npos) {
+    std::string up_usecs_str = up.substr(pos + 1);
+    const size_t zeros_needed = 6 - up_usecs_str.length();
+    std::ostringstream os;
+    os << up_usecs_str;
+    for (size_t i = 0; i < zeros_needed; i++) {
+      os << "0";
+    }
+    uptime.tv_usec = strtol(os.str().c_str(), nullptr, 10);
   }
-  std::string up_usecs_str = up.substr(pos + 1);
-  const size_t zeros_needed = 6 - up_usecs_str.length();
-  std::ostringstream os;
-  os << up_usecs_str;
-  for (size_t i = 0; i < zeros_needed; i++) {
-    os << "0";
-  }
-  uptime.tv_usec = strtol(os.str().c_str(), nullptr, 10);
 
   // Finally convert seconds-since-boot into an actual absolute timeval.
   return TimeDiff(now, uptime);
