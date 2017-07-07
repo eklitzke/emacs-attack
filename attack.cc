@@ -253,17 +253,17 @@ int main(int argc, char **argv) {
 
     // We know when the Emacs process was started. But we *don't* know when the
     // RNG was seeded. Thus we brute force things by looping through different
-    // second offsets since the Emacs process was started. This number
-    // potentially should be pretty large, e.g. a user might generate their
-    // first temporary file 1000 seconds after Emacs was started.
+    // second offsets since the Emacs process was started. This number should be
+    // fairly large, e.g. a user might generate their first temporary file 1000
+    // seconds after Emacs was started.
     for (size_t i = 0; i < seconds; i++) {
       LCG lcg(emacs_start.tv_sec + i);
 
       // We also don't know how many times make-temp-name has been called. Since
-      // each call updates the RNG state, we try iterate through different
-      // values. This loop should have a smaller upper bound than the previous
-      // loop, since under normal operation temporary files are created somewhat
-      // infrequently.
+      // each call updates the RNG state, we iterate through different values,
+      // corresponding to different # calls to make-temp-name. This loop should
+      // probably have a smaller upper bound than the previous loop, since under
+      // normal operation temporary files are created somewhat infrequently.
       for (size_t j = 0; j < files; j++) {
         lcg.Next(buf);
         std::ostringstream os;
@@ -273,7 +273,7 @@ int main(int argc, char **argv) {
         const std::string outname = os.str();
 
         if (create) {
-          std::ofstream{outname};  // naughty
+          std::ofstream{outname};
         }
         if (verbose) {
           std::cout << outname << "\n";
