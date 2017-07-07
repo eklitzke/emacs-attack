@@ -208,13 +208,14 @@ int main(int argc, char **argv) {
     if (stat_file == nullptr) {
       continue;
     }
-    fscanf(stat_file,
-           "%*d %s %*s %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d "
-           "%*d %*d %*d %*d %*d %d",
-           proc_name, &process_start);
+    int matched =
+        fscanf(stat_file,
+               "%*d %s %*s %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d "
+               "%*d %*d %*d %*d %*d %d",
+               proc_name, &process_start);
     fclose(stat_file);
 
-    if (strcmp(proc_name, "(emacs)") != 0) {
+    if (matched != 2 || strcmp(proc_name, "(emacs)") != 0) {
       continue;
     }
 
