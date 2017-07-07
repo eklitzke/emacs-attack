@@ -73,7 +73,7 @@ timeval TimeAdd(const timeval &x, const timeval &y) {
 
 // Get the boot time for this system.
 timeval BootTime() {
-  timeval now, uptime;
+  timeval now;
   gettimeofday(&now, nullptr);
 
   std::string up;
@@ -86,10 +86,10 @@ timeval BootTime() {
     return {};
   }
 
-  // this code is awful
+  // this is bad, but it works...
+  timeval uptime;
   std::string up_secs_str = up.substr(0, pos);
   uptime.tv_sec = strtol(up_secs_str.c_str(), nullptr, 10);
-
   std::string up_usecs_str = up.substr(pos + 1);
   const size_t zeros_needed = 6 - up_usecs_str.length();
   std::ostringstream os;
@@ -112,7 +112,7 @@ bool IsPid(const char *s) {
   return true;
 }
 
-// Print usage
+// Print usage.
 void PrintUsage() {
   std::cout << "Usage: attack [-p|--prefix PREFIX] [-s|--seconds "
                "SECONDS] [-f|--files FILES] [-c|--create] [-q|--quiet]\n";
