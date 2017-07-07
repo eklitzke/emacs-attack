@@ -6,7 +6,6 @@
 #include <iostream>
 #include <locale>
 #include <sstream>
-#include <vector>
 
 #include <dirent.h>
 #include <getopt.h>
@@ -16,6 +15,7 @@
 
 #define USECS 1000000
 
+// Table used by Emacs for generating a random suffix.
 static const char make_temp_name_tbl[64] = {
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
     'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
@@ -23,7 +23,7 @@ static const char make_temp_name_tbl[64] = {
     'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_'};
 
-// The LCG used by Emacs.
+// The RNG used by Emacs, a simple LCG.
 class LCG {
  public:
   LCG() = delete;
@@ -32,11 +32,9 @@ class LCG {
 
   inline void Next(char *out) {
     unsigned num = seed_;
-
     out[0] = make_temp_name_tbl[num & 63], num >>= 6;
     out[1] = make_temp_name_tbl[num & 63], num >>= 6;
     out[2] = make_temp_name_tbl[num & 63], num >>= 6;
-
     seed_ += 25229;
     seed_ %= 225307;
   }
@@ -47,9 +45,9 @@ class LCG {
 
 // Take the difference of two timevals, x - y.
 timeval TimeDiff(const timeval &x, const timeval &y) {
-  timeval result;
-  result.tv_sec = x.tv_sec - y.tv_sec;
-  result.tv_usec = x.tv_usec - y.tv_usec;
+  timeval result{
+      .tv_sec = x.tv_sec - y.tv_sec, .tv_usec = x.tv_usec - y.tv_usec,
+  };
   if (result.tv_usec < 0) {
     result.tv_usec += USECS;
     result.tv_sec--;
@@ -60,9 +58,9 @@ timeval TimeDiff(const timeval &x, const timeval &y) {
 
 // Add two timevals, x + y.
 timeval TimeAdd(const timeval &x, const timeval &y) {
-  timeval result;
-  result.tv_sec = x.tv_sec + y.tv_sec;
-  result.tv_usec = x.tv_usec + y.tv_usec;
+  timeval result{
+      .tv_sec = x.tv_sec + y.tv_sec, .tv_usec = x.tv_usec + y.tv_usec,
+  };
   if (result.tv_usec >= USECS) {
     result.tv_usec -= USECS;
     result.tv_sec++;
@@ -80,16 +78,17 @@ timeval BootTime() {
   std::ifstream uptime_file("/proc/uptime");
   uptime_file >> up;
 
+  // Get the seconds part of the uptime.
+  timeval uptime{.tv_sec = strtol(up.c_str(), nullptr, 10)};
+
+  // Get the microseconds part of the uptime. Is this really necessary? Probably
+  // not, because we have to loop through a bunch of second offsets later on
+  // anyway. But doing this is the Right Thing, so we persevere.
   size_t pos = up.find('.');
   if (pos == std::string::npos) {
     std::cerr << "Failed to parse uptime.\n";
     return {};
   }
-
-  // this is bad, but it works...
-  timeval uptime;
-  std::string up_secs_str = up.substr(0, pos);
-  uptime.tv_sec = strtol(up_secs_str.c_str(), nullptr, 10);
   std::string up_usecs_str = up.substr(pos + 1);
   const size_t zeros_needed = 6 - up_usecs_str.length();
   std::ostringstream os;
@@ -99,10 +98,11 @@ timeval BootTime() {
   }
   uptime.tv_usec = strtol(os.str().c_str(), nullptr, 10);
 
+  // Finally convert seconds-since-boot into an actual absolute timeval.
   return TimeDiff(now, uptime);
 }
 
-// Return true if the string looks like a pid.
+// Return true if the string looks like a PID, false otherwise.
 bool IsPid(const char *s) {
   while (*s) {
     if (!isdigit(*s++)) {
@@ -170,8 +170,7 @@ int main(int argc, char **argv) {
   }
 
   if (!create && !verbose) {
-    std::cout
-        << "Cowardly refusing to run unless either -c or -v is supplied:\n";
+    std::cout << "Cowardly refusing to run with -q and without -c\n";
     PrintUsage();
     return 1;
   }
@@ -182,11 +181,16 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  // Get the boot time for the system, in terms of number of seconds (and
+  // microseconds!) since the epoch.
   const timeval boot_time = BootTime();
+
+  // Number of jiffies in a second.
   const long jiffies = sysconf(_SC_CLK_TCK);
 
+  // Create a null-terminated buffer for the LCG output.
   char buf[4];
-  memset(buf, 0, sizeof(buf));  // ensure buf is null terminated
+  memset(buf, 0, sizeof(buf));
 
   for (;;) {
     dirent *d = readdir(proc);
@@ -197,9 +201,6 @@ int main(int argc, char **argv) {
       continue;
     }
 
-    char proc_name[128];
-    int process_start;
-
     std::ostringstream os;
     os << "/proc/" << d->d_name << "/stat";
 
@@ -207,6 +208,13 @@ int main(int argc, char **argv) {
     if (stat_file == nullptr) {
       continue;
     }
+
+    // Field #22 in /proc/PID/stat tells us when this process was started.
+    //
+    // This field is given to us in the least convenient possible format: number
+    // of jiffies since the system was booted.
+    char proc_name[128];
+    int process_start;
     int matched =
         fscanf(stat_file,
                "%*d %s %*s %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d "
@@ -214,28 +222,45 @@ int main(int argc, char **argv) {
                proc_name, &process_start);
     fclose(stat_file);
 
+    // Is this process Emacs?. This can also be obtained via /proc/PID/comm or
+    // /proc/PID/exe, but since we need to access /proc/PID/stat to get the time
+    // the process was started, we might as well extract it here.
     if (matched != 2 || strcmp(proc_name, "(emacs)") != 0) {
       continue;
     }
 
-    timeval up;
-    up.tv_sec = process_start / jiffies;
-
+    // This is bad, and I feel bad.
     float frac_sec = static_cast<float>(process_start % jiffies) /
                      static_cast<float>(jiffies);
-    up.tv_usec = static_cast<int>(frac_sec * USECS);
+    timeval up{.tv_sec = process_start / jiffies,
+               .tv_usec = static_cast<int>(frac_sec * USECS)};
 
+    // Finally get the Emacs start time as an absolute timeval.
     timeval emacs_start = TimeAdd(boot_time, up);
 
+    // We know when the Emacs process was started. But we *don't* know when the
+    // RNG was seeded. Thus we brute force things by looping through different
+    // second offsets since the Emacs process was started. This number
+    // potentially should be pretty large, e.g. a user might generate their
+    // first temporary file 1000 seconds after Emacs was started.
     for (size_t i = 0; i < seconds; i++) {
       LCG lcg(emacs_start.tv_sec + i);
+
+      // We also don't know how many times make-temp-name has been called. Since
+      // each call updates the RNG state, we try iterate through different
+      // values. This loop should have a smaller upper bound than the previous
+      // loop, since under normal operation temporary files are created somewhat
+      // infrequently.
       for (size_t j = 0; j < files; j++) {
         lcg.Next(buf);
         std::ostringstream os;
         os << prefix << d->d_name << buf;
+
+        // Finally get a candidate file name!
         const std::string outname = os.str();
+
         if (create) {
-          std::ofstream{outname};
+          std::ofstream{outname};  // naughty
         }
         if (verbose) {
           std::cout << outname << "\n";
