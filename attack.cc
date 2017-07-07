@@ -235,7 +235,7 @@ int main(int argc, char **argv) {
         os << prefix << d->d_name << buf;
         const std::string outname = os.str();
         if (create) {
-          std::ofstream f(outname);
+          std::ofstream{outname};
         }
         if (verbose) {
           std::cout << outname << "\n";
