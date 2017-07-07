@@ -28,8 +28,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-enum { USECS_PER_SEC = 1000000 };
-
 // Table used by Emacs for generating a random suffix.
 static const char make_temp_name_tbl[64] = {
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
@@ -58,6 +56,9 @@ class LCG {
   unsigned seed_;
 };
 
+// Needed for timeval math.
+enum { USECS_PER_SEC = 1000000 };
+
 // Take the difference of two timevals, x - y.
 timeval TimeDiff(const timeval &x, const timeval &y) {
   timeval result{
@@ -66,7 +67,7 @@ timeval TimeDiff(const timeval &x, const timeval &y) {
   if (result.tv_usec < 0) {
     result.tv_usec += USECS_PER_SEC;
     result.tv_sec--;
-    assert(result.tv_usec < USECS_PER_SEC);
+    assert(result.tv_usec > 0);
   }
   return result;
 }

@@ -1,4 +1,4 @@
-CFLAGS := -flto -O2 -Wall
+CFLAGS := -O2 -Wall
 
 attack: attack.cc
 	$(CXX) $(CFLAGS) $^ -o $@
