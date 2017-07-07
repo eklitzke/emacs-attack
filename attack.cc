@@ -28,7 +28,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define USECS 1000000
+enum { USECS_PER_SEC = 1000000 };
 
 // Table used by Emacs for generating a random suffix.
 static const char make_temp_name_tbl[64] = {
@@ -64,9 +64,9 @@ timeval TimeDiff(const timeval &x, const timeval &y) {
       .tv_sec = x.tv_sec - y.tv_sec, .tv_usec = x.tv_usec - y.tv_usec,
   };
   if (result.tv_usec < 0) {
-    result.tv_usec += USECS;
+    result.tv_usec += USECS_PER_SEC;
     result.tv_sec--;
-    assert(result.tv_usec < USECS);
+    assert(result.tv_usec < USECS_PER_SEC);
   }
   return result;
 }
@@ -76,10 +76,10 @@ timeval TimeAdd(const timeval &x, const timeval &y) {
   timeval result{
       .tv_sec = x.tv_sec + y.tv_sec, .tv_usec = x.tv_usec + y.tv_usec,
   };
-  if (result.tv_usec >= USECS) {
-    result.tv_usec -= USECS;
+  if (result.tv_usec >= USECS_PER_SEC) {
+    result.tv_usec -= USECS_PER_SEC;
     result.tv_sec++;
-    assert(result.tv_usec < USECS);
+    assert(result.tv_usec < USECS_PER_SEC);
   }
   return result;
 }
@@ -246,7 +246,7 @@ int main(int argc, char **argv) {
     float frac_sec = static_cast<float>(process_start % jiffies) /
                      static_cast<float>(jiffies);
     timeval up{.tv_sec = process_start / jiffies,
-               .tv_usec = static_cast<int>(frac_sec * USECS)};
+               .tv_usec = static_cast<int>(frac_sec * USECS_PER_SEC)};
 
     // Finally get the Emacs start time as an absolute timeval.
     timeval emacs_start = TimeAdd(boot_time, up);
