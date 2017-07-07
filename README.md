@@ -21,5 +21,4 @@ to stdout. The following arguments are useful:
 ## License
 
 This code is [free software](https://www.gnu.org/philosophy/free-sw.en.html)
-licensed under the GPLv3 (or, at your option, a later version). This is the same
-license and terms used upstream by GNU Emacs.
+licensed under the GPL v3+.
