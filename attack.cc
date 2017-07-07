@@ -273,7 +273,7 @@ int main(int argc, char **argv) {
         const std::string outname = os.str();
 
         if (create) {
-          std::ofstream{outname};
+          std::ofstream{outname};  // https://godbolt.org/g/FHu9YD
         }
         if (verbose) {
           std::cout << outname << "\n";
